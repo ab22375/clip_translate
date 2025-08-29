@@ -106,6 +106,7 @@ class FloatingTranslator(QMainWindow):
         self.clipboard_timer = QTimer()
         self.last_clipboard_text = ""
         self.is_monitoring = False
+        self.is_closing = False  # Flag to prevent operations during shutdown
         self.init_ui()
         self.setup_connections()
         
@@ -397,7 +398,7 @@ class FloatingTranslator(QMainWindow):
                 background-color: rgba(255, 69, 58, 250);
             }
         """)
-        close_btn.clicked.connect(self.close)
+        close_btn.clicked.connect(self.close)  # This will trigger closeEvent
         
         layout.addWidget(title)
         layout.addStretch()
@@ -492,7 +493,7 @@ class FloatingTranslator(QMainWindow):
     
     def check_clipboard(self):
         """Check clipboard for new content."""
-        if not self.is_monitoring:
+        if not self.is_monitoring or self.is_closing:
             return
             
         try:
@@ -516,9 +517,10 @@ class FloatingTranslator(QMainWindow):
                 logger.info(f"Starting translation with source={self.translation_worker.source_lang}, target={self.translation_worker.target_lang}")
                 self.translation_worker.translate(current_text)
         except Exception as e:
-            logger.error(f"Clipboard check error: {e}")
-            self.status_label.setText("Clipboard error")
-            self.status_label.setStyleSheet("color: #FF6B6B;")
+            if not self.is_closing:
+                logger.error(f"Clipboard check error: {e}")
+                self.status_label.setText("Clipboard error")
+                self.status_label.setStyleSheet("color: #FF6B6B;")
     
     @pyqtSlot(str, str, bool)
     def on_translation_ready(self, translated, original, cached):
@@ -574,11 +576,39 @@ class FloatingTranslator(QMainWindow):
         """Handle mouse move for dragging."""
         if event.buttons() == Qt.MouseButton.LeftButton and hasattr(self, 'drag_position'):
             self.move(event.globalPosition().toPoint() - self.drag_position)
+    
+    def closeEvent(self, event):
+        """Handle window close event - clean shutdown."""
+        logger.info("Closing application...")
+        self.is_closing = True
+        
+        # Stop clipboard monitoring
+        self.is_monitoring = False
+        self.clipboard_timer.stop()
+        
+        # Stop and clean up translation worker
+        if self.translation_worker.isRunning():
+            self.translation_worker.terminate()
+            self.translation_worker.wait(1000)  # Wait max 1 second
+        
+        # Close event loop if exists
+        if hasattr(self.translation_worker, '_loop') and self.translation_worker._loop:
+            try:
+                self.translation_worker._loop.close()
+            except:
+                pass
+        
+        # Accept the close event
+        event.accept()
+        
+        # Ensure the application quits
+        QApplication.quit()
 
 
 def main():
     """Main entry point for GUI."""
     import argparse
+    import signal
     
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Clip Translate GUI')
@@ -597,12 +627,26 @@ def main():
     # Set application style
     app.setStyle("Fusion")
     
+    # Create main window
     window = FloatingTranslator(
         source_lang=args.source, 
         target_lang=args.target,
         show_romaji=args.romaji,
         show_hiragana=args.hiragana
     )
+    
+    # Setup signal handler for clean exit on Ctrl+C
+    def signal_handler(sig, frame):
+        logger.info("Received interrupt signal, closing...")
+        window.close()
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    # Make app handle Ctrl+C properly
+    timer = QTimer()
+    timer.start(500)
+    timer.timeout.connect(lambda: None)  # Let Python handle signals
+    
     window.show()
     
     sys.exit(app.exec())
