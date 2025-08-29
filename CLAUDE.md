@@ -91,6 +91,9 @@ clip_translate_gui -s ja -t en --hiragana
 - **UI Updates**: All translation results update UI via Qt signals/slots
 - **Clipboard Handling**: Timer-based clipboard monitoring (500ms intervals)
 - **Language Filtering**: Original text only displayed after successful language detection
+- **Text Interaction**: All text areas are non-selectable to prevent clipboard conflicts
+- **Copy Control**: Translation copying only via dedicated button to avoid monitoring loops
+- **Clean Shutdown**: Proper cleanup of threads, timers, and event loops on window close
 
 ## Common Issues & Solutions
 
@@ -112,11 +115,21 @@ clip_translate_gui -s ja -t en --hiragana
    - Ensure clipboard contains text in the specified source language
    - Look for error messages in the status label
 
-5. **Event loop errors in GUI**
-   - This has been fixed in the current version
-   - If still occurring, restart the application
+5. **GUI freezing or hanging**
+   - This has been fixed by making text areas non-selectable
+   - Users cannot select text, preventing CMD+C clipboard conflicts
+   - Use only the "Copy Translation" button to copy results
 
-6. **Empty lines in output**
+6. **Application not closing properly**
+   - This has been fixed with proper shutdown handling
+   - Window close event properly terminates all background threads
+   - Ctrl+C handling implemented for clean terminal exit
+
+7. **Event loop errors in GUI**
+   - This has been fixed in the current version with proper loop management
+   - Background worker reuses event loops to prevent "loop closed" errors
+
+8. **Empty lines in output**
    - Both CLI and GUI automatically remove empty lines from translations
 
 ## Project Structure

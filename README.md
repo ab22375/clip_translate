@@ -13,6 +13,8 @@ A powerful clipboard translation tool that monitors your clipboard and automatic
 - 🔂 **Flexible Modes**: Choose between continuous monitoring or one-time translation
 - 🪟 **Floating Window**: Always-on-top, draggable, semi-transparent window (GUI)
 - 🎛️ **Adjustable Opacity**: Customize window transparency for your workflow
+- 🛡️ **Stability**: Non-selectable text prevents freezing, controlled clipboard access
+- 🔄 **Clean Shutdown**: Proper thread management and graceful exit handling
 
 ## Installation
 
@@ -207,7 +209,9 @@ Previously translated text is cached during the session for instant retrieval.
 - **Reading Display**: Dedicated purple area for Japanese romaji/hiragana
 - **Status Indicators**: Real-time status updates (Detecting, Translating, Cached, etc.)
 - **Language Dropdowns**: Easy switching between language pairs
-- **Copy Button**: Manual clipboard control to avoid loops
+- **Controlled Copying**: Copy button prevents clipboard monitoring conflicts
+- **Non-Selectable Text**: Prevents system freezing from CMD+C conflicts
+- **Persistent Display**: Text remains visible after copying for reference
 
 ## Development
 
@@ -273,6 +277,16 @@ Then use `--romaji` or `--hiragana` flags.
 - Ensure PyQt6 is installed (should be automatic)
 - Try running with `--help` first to test argument parsing
 - Check for error messages in terminal
+
+### GUI freezing or system hanging
+- **Fixed**: Text areas are now non-selectable to prevent CMD+C conflicts
+- Use only the "Copy Translation" button to copy results
+- Text cannot be manually selected to avoid clipboard monitoring loops
+
+### Application not closing properly
+- **Fixed**: Proper shutdown handling implemented
+- Window close button terminates all background processes
+- Ctrl+C in terminal now exits cleanly without errors
 
 ### No translation happening
 **GUI:**

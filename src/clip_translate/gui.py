@@ -180,6 +180,8 @@ class FloatingTranslator(QMainWindow):
         self.original_text.setReadOnly(True)
         self.original_text.setMinimumHeight(150)
         self.original_text.setMaximumHeight(200)
+        # Make text non-selectable to prevent CMD+C freezing
+        self.original_text.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
         original_layout.addWidget(self.original_text)
         
         # Add reading text area if Japanese readings are enabled
@@ -189,6 +191,8 @@ class FloatingTranslator(QMainWindow):
             self.reading_text.setReadOnly(True)
             self.reading_text.setMinimumHeight(60)
             self.reading_text.setMaximumHeight(100)
+            # Make text non-selectable
+            self.reading_text.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
             self.reading_text.setStyleSheet("""
                 QTextEdit {
                     background-color: rgba(60, 45, 45, 200);
@@ -209,6 +213,8 @@ class FloatingTranslator(QMainWindow):
         self.translation_text = QTextEdit()
         self.translation_text.setReadOnly(True)
         self.translation_text.setMinimumHeight(150)
+        # Make text non-selectable to prevent CMD+C freezing
+        self.translation_text.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
         self.copy_translation_btn = QPushButton("Copy Translation")
         translation_layout.addWidget(self.translation_text)
         translation_layout.addWidget(self.copy_translation_btn)
@@ -281,6 +287,11 @@ class FloatingTranslator(QMainWindow):
                 padding: 5px;
                 font-family: 'Menlo', 'Monaco', 'Consolas', monospace;
                 font-size: 14px;
+            }
+            
+            /* Show that text is not selectable */
+            QTextEdit:hover {
+                cursor: default;
             }
             
             QComboBox {
@@ -467,13 +478,27 @@ class FloatingTranslator(QMainWindow):
     
     @pyqtSlot()
     def copy_translation(self):
-        """Copy translation to clipboard."""
+        """Copy translation to clipboard without triggering monitor."""
         text = self.translation_text.toPlainText()
         if text:
+            # Temporarily disable monitoring to prevent loop
+            was_monitoring = self.is_monitoring
+            self.is_monitoring = False
+            
+            # Copy text and update last clipboard text to prevent re-translation
             pyperclip.copy(text)
-            # Temporarily change button text
+            self.last_clipboard_text = text
+            
+            # Re-enable monitoring after a short delay
+            if was_monitoring:
+                QTimer.singleShot(100, lambda: setattr(self, 'is_monitoring', True))
+            
+            # Visual feedback
             self.copy_translation_btn.setText("Copied!")
             QTimer.singleShot(1000, lambda: self.copy_translation_btn.setText("Copy Translation"))
+            
+            # Keep the text visible - don't clear anything
+            logger.info(f"Copied translation to clipboard: {text[:50]}...")
     
     @pyqtSlot()
     def swap_languages(self):
