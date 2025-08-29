@@ -25,6 +25,7 @@ dependencies = [
     "pydantic>=2.11.7",
     "pykakasi>=2.3.0",
     "pyperclip>=1.9.0",
+    "pyqt6>=6.9.1",
     "python-dotenv>=1.1.1",
     "rich>=14.1.0",
     "typer>=0.16.1",
@@ -54,6 +55,7 @@ dev = [
 
 [project.scripts]
 clip_translate = "clip_translate.cli:main"
+clip_translate_gui = "clip_translate.gui:main"
 
 # --- Tool Configurations ---
 [tool.ruff]

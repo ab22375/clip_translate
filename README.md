@@ -1,15 +1,18 @@
 # clip_translate
 
-A powerful clipboard translation tool that monitors your clipboard and automatically translates text between languages. Optimized for Japanese language learning with romaji and hiragana reading support.
+A powerful clipboard translation tool that monitors your clipboard and automatically translates text between languages. Available as both a command-line tool and a modern floating window GUI, optimized for Japanese language learning with romaji and hiragana reading support.
 
 ## Features
 
+- 🖥️ **Dual Interface**: Choose between CLI and floating window GUI
 - 🔄 **Continuous Monitoring**: Automatically detects and translates clipboard changes
 - 🎯 **Smart Language Detection**: Only translates text matching your source language
 - 🇯🇵 **Japanese Support**: Special features for Japanese including romaji and hiragana readings
 - ⚡ **Translation Caching**: Caches translations for improved performance
-- 🎨 **Rich Terminal Output**: Beautiful colored output with clear formatting
+- 🎨 **Rich Output**: Beautiful colored terminal output (CLI) and modern dark UI (GUI)
 - 🔂 **Flexible Modes**: Choose between continuous monitoring or one-time translation
+- 🪟 **Floating Window**: Always-on-top, draggable, semi-transparent window (GUI)
+- 🎛️ **Adjustable Opacity**: Customize window transparency for your workflow
 
 ## Installation
 
@@ -27,37 +30,59 @@ pip install -e .
 
 ## Quick Start
 
-### Basic Translation
+### GUI (Floating Window)
 
-Translate Spanish to English continuously:
+Launch the modern floating window interface:
 ```bash
+# Basic Japanese to English GUI
+clip_translate_gui -s ja -t en
+
+# GUI with romaji readings
+clip_translate_gui -s ja -t en --romaji
+
+# GUI with hiragana readings
+clip_translate_gui -s ja -t en --hiragana
+```
+
+### CLI (Command Line)
+
+Use the terminal interface:
+```bash
+# Basic translation
 clip_translate translate -s es -t en
-```
 
-### Japanese Translation with Readings
-
-Translate Japanese to English with original text and romaji:
-```bash
+# Japanese with readings
 clip_translate translate -s ja -t en --show-original --romaji
-```
 
-### One-Time Translation
-
-Translate clipboard content once and exit:
-```bash
+# One-time translation (no continuous monitoring)
 clip_translate translate -s ja -t en --once
 ```
 
 ## Usage
 
-### Main Command
+### GUI Commands
 
 ```bash
+# Launch floating window
+clip_translate_gui [OPTIONS]
+```
+
+**GUI Options:**
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--source` | `-s` | Source language code | `ja` |
+| `--target` | `-t` | Target language code | `en` |
+| `--romaji` | `-r` | Show romaji reading for Japanese text | `False` |
+| `--hiragana` | `--hira` | Show hiragana reading for Japanese text | `False` |
+
+### CLI Commands
+
+```bash
+# Run terminal translation
 clip_translate translate [OPTIONS]
 ```
 
-### Options
-
+**CLI Options:**
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `--source` | `-s` | Source language code | `es` |
@@ -75,39 +100,68 @@ clip_translate languages
 
 ## Examples
 
-### Continuous Japanese to English Translation
-```bash
-clip_translate translate -s ja -t en
-```
-Copy any Japanese text to your clipboard and it will be automatically translated to English.
+### GUI Examples
 
-### Japanese with Full Analysis
+**Japanese Learning with Floating Window:**
+```bash
+clip_translate_gui -s ja -t en --romaji
+```
+- Opens a large, readable floating window
+- Shows original Japanese text
+- Displays romaji pronunciation
+- Shows English translation
+- Window stays on top of other apps
+
+**Basic GUI Translation:**
+```bash
+clip_translate_gui -s es -t en
+```
+- Floating window for Spanish to English
+- Clean, modern dark interface
+- Drag to position anywhere on screen
+- Adjust opacity with slider
+
+### CLI Examples
+
+**Terminal Translation with Full Japanese Analysis:**
 ```bash
 clip_translate translate -s ja -t en --show-original --romaji
 ```
-Shows:
+Shows in terminal:
 - Original Japanese text
-- Romaji (romanized) reading
+- Romaji (romanized) reading  
 - English translation
 
-### Quick One-Time Translation
+**Quick One-Time Translation:**
 ```bash
 clip_translate translate -s fr -t en --once
 ```
 Translates French text in clipboard to English once and exits.
 
-### Chinese to Spanish
+**Continuous Background Translation:**
 ```bash
 clip_translate translate -s zh-cn -t es --show-original
 ```
+Continuously monitors clipboard for Chinese text and translates to Spanish.
 
 ## How It Works
 
-1. **Clipboard Monitoring**: The tool continuously monitors your clipboard for changes
-2. **Language Detection**: When new text is detected, it verifies the language matches your source setting
-3. **Translation**: If the language matches, it translates the text using Google Translate
-4. **Clipboard Update**: The translated text replaces the original in your clipboard
-5. **Display**: Results are shown in the terminal with formatting
+### GUI Mode
+1. **Floating Window**: Opens a modern, always-on-top floating window
+2. **Clipboard Monitoring**: Continuously monitors clipboard changes (every 500ms)
+3. **Language Detection**: Verifies clipboard content matches your source language
+4. **Smart Display**: Only shows original text if language matches
+5. **Translation**: Translates using Google Translate API in background thread
+6. **Reading Generation**: Creates romaji/hiragana readings for Japanese (if enabled)
+7. **Visual Feedback**: Updates window with original, reading, and translated text
+8. **Manual Copy**: Use "Copy Translation" button to copy result to clipboard
+
+### CLI Mode  
+1. **Terminal Monitoring**: Runs in terminal with continuous clipboard monitoring
+2. **Language Detection**: Verifies clipboard content matches source language
+3. **Translation**: Translates matching text using Google Translate
+4. **Auto-Replace**: Translated text replaces original in clipboard  
+5. **Rich Display**: Shows results in terminal with color formatting
 
 ## Language Codes
 
@@ -144,7 +198,16 @@ Previously translated text is cached during the session for instant retrieval.
 ### Clean Output
 - Automatically removes empty lines from translations
 - Clear visual separation between translations
-- Color-coded status indicators
+- Color-coded status indicators (CLI) and visual status labels (GUI)
+
+### GUI-Specific Features
+- **Modern Interface**: Dark theme optimized for macOS
+- **Window Controls**: Always-on-top, draggable, adjustable opacity
+- **Large Text Areas**: 1050x910px window for comfortable reading
+- **Reading Display**: Dedicated purple area for Japanese romaji/hiragana
+- **Status Indicators**: Real-time status updates (Detecting, Translating, Cached, etc.)
+- **Language Dropdowns**: Easy switching between language pairs
+- **Copy Button**: Manual clipboard control to avoid loops
 
 ## Development
 
@@ -173,13 +236,15 @@ uv run mypy .
 ```
 clip_translate/
 ├── src/clip_translate/          # Source code
-│   ├── __init__.py
-│   └── cli.py                  # CLI with all translation logic
-├── tests/                      # Test files
+│   ├── __init__.py             # Package initialization
+│   ├── core.py                 # Shared translation engine
+│   ├── cli.py                  # CLI interface with typer
+│   └── gui.py                  # GUI interface with PyQt6
+├── tests/                      # Test files  
 ├── docs/                       # Documentation
 ├── CLAUDE.md                   # Instructions for AI assistants
-├── pyproject.toml             # Project configuration
 ├── README.md                   # This file
+├── pyproject.toml             # Project configuration
 └── .gitignore
 ```
 
@@ -190,22 +255,41 @@ clip_translate/
 
 ## Troubleshooting
 
-### Command not found
+### Commands not found
 Make sure you've installed the package:
 ```bash
 uv pip install -e .
 ```
+Available commands: `clip_translate` and `clip_translate_gui`
 
-### Japanese readings not showing
+### Japanese readings not showing  
 Install the Japanese processing library:
 ```bash
 uv add pykakasi
 ```
+Then use `--romaji` or `--hiragana` flags.
+
+### GUI not launching or crashing
+- Ensure PyQt6 is installed (should be automatic)
+- Try running with `--help` first to test argument parsing
+- Check for error messages in terminal
 
 ### No translation happening
-- Check that your clipboard contains text in the source language
-- Verify internet connection
+**GUI:**
+- Check internet connection
+- Ensure clipboard contains text in the specified source language
+- Look at status label for error messages
+- Try different text or restart the application
+
+**CLI:**
+- Check clipboard contains text in source language
+- Verify internet connection  
 - Try with `--show-original` to see what's being detected
+
+### GUI argument errors
+- Don't use `-h` for hiragana (conflicts with help)
+- Use `--hiragana` or `--hira` instead
+- Use `clip_translate_gui --help` to see all options
 
 ## Contributing
 
