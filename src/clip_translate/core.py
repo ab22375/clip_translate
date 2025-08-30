@@ -2,29 +2,76 @@
 
 import asyncio
 from typing import Dict, Tuple, Optional, Any
-from googletrans import Translator, LANGUAGES
 from loguru import logger
+
+from .config import Config
+from .engines import get_backend, TranslationBackend
 
 
 class TranslationEngine:
     """Core translation engine with caching and language detection."""
     
-    def __init__(self):
-        self.translator = Translator()
+    def __init__(self, config: Optional[Config] = None):
+        self.config = config or Config()
         self.cache: Dict[str, Tuple[str, str]] = {}
         self.converter = None
+        self._backend = None
+        self._init_backend()
+    
+    def _init_backend(self):
+        """Initialize the translation backend."""
+        engine = self.config.get_engine()
+        engine_config = self.config.get_engine_config(engine)
+        
+        try:
+            self._backend = get_backend(engine, **engine_config)
+            logger.info(f"Initialized {engine} translation backend")
+        except Exception as e:
+            logger.error(f"Failed to initialize {engine} backend: {e}")
+            # Fallback to Google Translate
+            if engine != "google":
+                logger.info("Falling back to Google Translate")
+                self._backend = get_backend("google")
+            else:
+                raise
+    
+    def switch_engine(self, engine: str) -> bool:
+        """Switch to a different translation engine."""
+        try:
+            engine_config = self.config.get_engine_config(engine)
+            new_backend = get_backend(engine, **engine_config)
+            
+            # Validate the new backend
+            if not new_backend.validate_config():
+                logger.error(f"Invalid configuration for {engine} engine")
+                return False
+            
+            self._backend = new_backend
+            self.config.set_engine(engine)
+            self.config.save_config()
+            
+            # Clear cache when switching engines
+            self.cache.clear()
+            
+            logger.info(f"Switched to {engine} translation engine")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to switch to {engine}: {e}")
+            return False
         
     def validate_languages(self, src_lang: str, target_lang: str) -> None:
         """Validate that the source and target languages are supported."""
-        if src_lang not in LANGUAGES.keys():
+        supported = self._backend.get_supported_languages()
+        if src_lang not in supported and src_lang != 'auto':
             raise ValueError(
                 f"Unsupported source language: {src_lang}. "
-                f"Supported languages are: {', '.join(LANGUAGES.keys())}"
+                f"Supported languages are: {', '.join(supported.keys())}"
             )
-        if target_lang not in LANGUAGES.keys():
+        if target_lang not in supported:
             raise ValueError(
                 f"Unsupported target language: {target_lang}. "
-                f"Supported languages are: {', '.join(LANGUAGES.keys())}"
+                f"Supported languages are: {', '.join(supported.keys())}"
             )
     
     def setup_japanese_converter(self, romaji: bool = False, hiragana: bool = False) -> bool:
@@ -40,12 +87,7 @@ class TranslationEngine:
     
     async def detect_language(self, text: str) -> Optional[str]:
         """Detect the language of the given text."""
-        try:
-            detection = await self.translator.detect(text.strip())
-            return detection.lang
-        except Exception as e:
-            logger.error(f"Language detection failed: {e}")
-            return None
+        return await self._backend.detect_language(text)
     
     async def translate_text(
         self, 
@@ -71,13 +113,13 @@ class TranslationEngine:
         
         # Perform translation
         try:
-            translated = await self.translator.translate(
-                original_text, src=source, dest=target
+            translated_text = await self._backend.translate(
+                original_text, source=source, target=target
             )
             
             # Clean translated text
             translated_lines = [
-                line for line in translated.text.strip().split('\n') 
+                line for line in translated_text.strip().split('\n') 
                 if line.strip()
             ]
             translated_text = '\n'.join(translated_lines)
@@ -138,6 +180,16 @@ class TranslationEngine:
         return '\n'.join(reading_lines) if reading_lines else None
 
 
-def get_supported_languages() -> Dict[str, str]:
+def get_supported_languages(engine: Optional[str] = None) -> Dict[str, str]:
     """Get dictionary of supported language codes and names."""
+    if engine:
+        # Get languages for specific engine
+        try:
+            backend = get_backend(engine)
+            return backend.get_supported_languages()
+        except:
+            pass
+    
+    # Default to Google Translate languages for compatibility
+    from googletrans import LANGUAGES
     return LANGUAGES

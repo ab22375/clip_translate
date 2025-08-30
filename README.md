@@ -1,10 +1,12 @@
 # clip_translate
 
-A powerful clipboard translation tool that monitors your clipboard and automatically translates text between languages. Available as both a command-line tool and a modern floating window GUI, optimized for Japanese language learning with romaji and hiragana reading support.
+A powerful clipboard translation tool that monitors your clipboard and automatically translates text between languages using multiple AI engines (Google Translate, OpenAI, DeepL, Claude). Available as both a command-line tool and a modern floating window GUI, optimized for Japanese language learning with romaji and hiragana reading support.
 
 ## Features
 
 - 🖥️ **Dual Interface**: Choose between CLI and floating window GUI
+- 🤖 **Multiple AI Engines**: Google Translate, OpenAI, DeepL, Claude support
+- ⚙️ **Easy Configuration**: Settings dialog and config file management  
 - 🔄 **Continuous Monitoring**: Automatically detects and translates clipboard changes
 - 🎯 **Smart Language Detection**: Only translates text matching your source language
 - 🇯🇵 **Japanese Support**: Special features for Japanese including romaji and hiragana readings
@@ -29,6 +31,29 @@ uv pip install -e .
 # Or install with pip
 pip install -e .
 ```
+
+## Configuration
+
+### API Keys (Optional)
+For engines other than Google Translate, you'll need API keys:
+
+```bash
+# Set environment variables
+export OPENAI_API_KEY="your-openai-key"
+export DEEPL_API_KEY="your-deepl-key" 
+export ANTHROPIC_API_KEY="your-claude-key"
+```
+
+### Available Engines
+- **Google Translate** (default): Free, no setup required
+- **OpenAI**: Requires OpenAI API key, uses GPT models
+- **DeepL**: Requires DeepL API key, high translation quality
+- **Claude**: Requires Anthropic API key, AI-powered translations
+
+### Configuration Options
+- **CLI**: Use `clip_translate configure` or `--engine` flag
+- **GUI**: Use the settings dialog (⚙️ button) to configure engines
+- **Config file**: Automatically saved to `~/.clip_translate/config.json`
 
 ## Quick Start
 
@@ -82,6 +107,9 @@ clip_translate_gui [OPTIONS]
 ```bash
 # Run terminal translation
 clip_translate translate [OPTIONS]
+
+# Configure settings
+clip_translate configure
 ```
 
 **CLI Options:**
@@ -89,6 +117,7 @@ clip_translate translate [OPTIONS]
 |--------|-------|-------------|---------|
 | `--source` | `-s` | Source language code | `es` |
 | `--target` | `-t` | Target language code | `en` |
+| `--engine` | `-e` | Translation engine (google/openai/deepl/claude) | `google` |
 | `--show-original` | `-o` | Show original text before translation | `False` |
 | `--romaji` | `-r` | Show romaji reading for Japanese text | `False` |
 | `--hiragana` | `-h` | Show hiragana reading for Japanese text | `False` |
@@ -134,6 +163,18 @@ Shows in terminal:
 - Romaji (romanized) reading  
 - English translation
 
+**Using Different Translation Engines:**
+```bash
+# Use OpenAI for translation
+clip_translate translate -s ja -t en --engine openai
+
+# Use DeepL for high-quality translation
+clip_translate translate -s fr -t en --engine deepl
+
+# Use Claude for AI-powered translation
+clip_translate translate -s zh-cn -t en --engine claude
+```
+
 **Quick One-Time Translation:**
 ```bash
 clip_translate translate -s fr -t en --once
@@ -153,17 +194,19 @@ Continuously monitors clipboard for Chinese text and translates to Spanish.
 2. **Clipboard Monitoring**: Continuously monitors clipboard changes (every 500ms)
 3. **Language Detection**: Verifies clipboard content matches your source language
 4. **Smart Display**: Only shows original text if language matches
-5. **Translation**: Translates using Google Translate API in background thread
+5. **Translation**: Translates using selected engine (Google/OpenAI/DeepL/Claude) in background thread
 6. **Reading Generation**: Creates romaji/hiragana readings for Japanese (if enabled)
 7. **Visual Feedback**: Updates window with original, reading, and translated text
-8. **Manual Copy**: Use "Copy Translation" button to copy result to clipboard
+8. **Engine Selection**: Choose translation engine via settings dialog
+9. **Manual Copy**: Use "Copy Translation" button to copy result to clipboard
 
 ### CLI Mode  
 1. **Terminal Monitoring**: Runs in terminal with continuous clipboard monitoring
 2. **Language Detection**: Verifies clipboard content matches source language
-3. **Translation**: Translates matching text using Google Translate
+3. **Translation**: Translates matching text using selected engine
 4. **Auto-Replace**: Translated text replaces original in clipboard  
 5. **Rich Display**: Shows results in terminal with color formatting
+6. **Engine Configuration**: Set via `--engine` flag or `clip_translate configure`
 
 ## Language Codes
 
@@ -241,21 +284,25 @@ uv run mypy .
 clip_translate/
 ├── src/clip_translate/          # Source code
 │   ├── __init__.py             # Package initialization
+│   ├── config.py               # Configuration management
 │   ├── core.py                 # Shared translation engine
+│   ├── engines.py              # Translation backend implementations
 │   ├── cli.py                  # CLI interface with typer
-│   └── gui.py                  # GUI interface with PyQt6
+│   ├── gui.py                  # GUI interface with PyQt6
+│   └── settings_dialog.py      # GUI settings dialog
 ├── tests/                      # Test files  
 ├── docs/                       # Documentation
 ├── CLAUDE.md                   # Instructions for AI assistants
 ├── README.md                   # This file
-├── pyproject.toml             # Project configuration
+├── pyproject.toml              # Project configuration
 └── .gitignore
 ```
 
 ## Requirements
 
-- Python 3.10+
-- Internet connection for Google Translate API
+- Python 3.12+
+- Internet connection for translation APIs
+- Optional: API keys for OpenAI, DeepL, or Claude
 
 ## Troubleshooting
 

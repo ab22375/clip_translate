@@ -1,10 +1,13 @@
 # Project Instructions for Claude
 
 ## Project Overview
-`clip_translate` is a Python application that monitors clipboard content and automatically translates text between languages using Google Translate. It comes in two forms: a CLI tool and a modern GUI application. The application is particularly optimized for Japanese translations with support for romaji and hiragana readings.
+`clip_translate` is a Python application that monitors clipboard content and automatically translates text between languages using multiple translation engines (Google Translate, OpenAI, DeepL, Claude). It comes in two forms: a CLI tool and a modern GUI application. The application is particularly optimized for Japanese translations with support for romaji and hiragana readings.
 
 ## Key Features
 - **Dual Interface**: Both CLI and floating window GUI options
+- **Multiple Translation Engines**: Google Translate, OpenAI, DeepL, Claude
+- **Configuration Management**: Persistent settings with config file and environment variables
+- **Settings GUI**: Configuration dialog for engine settings and API keys
 - Continuous clipboard monitoring and translation
 - Language detection to only translate matching source language
 - Japanese text support with romaji/hiragana readings
@@ -19,12 +22,38 @@
 # Install in development mode
 uv pip install -e .
 
+# Set up API keys (optional, for non-Google engines)
+export OPENAI_API_KEY="your-openai-key"
+export DEEPL_API_KEY="your-deepl-key"
+export ANTHROPIC_API_KEY="your-claude-key"
+
 # Run the CLI
 clip_translate --help
 
 # Run the GUI
 clip_translate_gui --help
 ```
+
+## Configuration
+The application uses a configuration file at `~/.clip_translate/config.json` and supports environment variables:
+
+### Engines Available:
+- **google**: Free, no API key required (default)
+- **openai**: Requires OPENAI_API_KEY
+- **deepl**: Requires DEEPL_API_KEY  
+- **claude**: Requires ANTHROPIC_API_KEY
+
+### CLI Configuration:
+```bash
+# Configure via CLI
+clip_translate configure
+
+# Or set engine directly
+clip_translate translate --engine openai -s ja -t en
+```
+
+### GUI Configuration:
+Use the settings dialog in the GUI to configure engines and API keys.
 
 ## Code Style & Conventions
 - **CLI**: Use `typer` for CLI commands, `rich.console` for terminal output
@@ -76,8 +105,10 @@ clip_translate_gui -s ja -t en --hiragana
 
 ### Translation Architecture
 - **Core Engine**: `TranslationEngine` class in `core.py` handles all translation logic
+- **Multiple Backends**: Pluggable backend system supporting Google, OpenAI, DeepL, Claude
+- **Configuration**: `Config` class manages settings, API keys, and engine selection
 - **CLI**: Uses async loops directly for translation
-- **GUI**: Uses `QThread` workers to prevent UI blocking
+- **GUI**: Uses `QThread` workers to prevent UI blocking with settings dialog
 - **Event Loop Management**: GUI carefully manages asyncio loops to prevent "loop closed" errors
 
 ### Caching
@@ -135,23 +166,30 @@ clip_translate_gui -s ja -t en --hiragana
 ## Project Structure
 ```
 src/clip_translate/
-├── __init__.py     # Package initialization
-├── core.py         # Shared translation engine and logic
-├── cli.py          # CLI implementation with typer
-└── gui.py          # GUI implementation with PyQt6
+├── __init__.py          # Package initialization
+├── config.py            # Configuration management with pydantic
+├── core.py              # Shared translation engine and logic
+├── engines.py           # Translation backend implementations
+├── cli.py               # CLI implementation with typer
+├── gui.py               # GUI implementation with PyQt6
+└── settings_dialog.py   # GUI settings dialog
 ```
 
 ## Dependencies
 - `googletrans` - Google Translate API (async)
+- `openai` - OpenAI API for GPT translations
+- `deepl` - DeepL API for high-quality translations  
+- `anthropic` - Claude API for AI translations
 - `pyperclip` - Clipboard access
 - `pykakasi` - Japanese text processing
 - `typer` - CLI framework
 - `rich` - Terminal formatting (CLI)
 - `PyQt6` - GUI framework
 - `loguru` - Logging
+- `pydantic` - Configuration validation
+- `python-dotenv` - Environment variable loading
 
 ## Future Improvements to Consider
-- Add support for translation APIs other than Google
 - Add file input/output support for both CLI and GUI
 - Add translation history saving and browsing
 - Add system tray integration for GUI
@@ -159,3 +197,6 @@ src/clip_translate/
 - Add support for multiple target languages simultaneously
 - Create macOS app bundle with py2app
 - Add dark/light mode toggle for GUI
+- Add batch translation support
+- Add more translation engines (Azure, Baidu, etc.)
+- Add user-defined custom prompts for AI engines

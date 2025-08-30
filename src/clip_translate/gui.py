@@ -17,6 +17,8 @@ import pyperclip
 from loguru import logger
 
 from clip_translate.core import TranslationEngine, get_supported_languages
+from clip_translate.config import Config
+from clip_translate.settings_dialog import SettingsDialog
 
 
 class TranslationWorker(QThread):
@@ -26,9 +28,10 @@ class TranslationWorker(QThread):
     error_occurred = pyqtSignal(str)
     language_detected = pyqtSignal(str)
     
-    def __init__(self):
+    def __init__(self, config: Config):
         super().__init__()
-        self.engine = TranslationEngine()
+        self.engine = TranslationEngine(config)
+        self.config = config
         self.source_lang = "ja"
         self.target_lang = "en"
         self.text_to_translate = ""
@@ -98,11 +101,12 @@ class FloatingTranslator(QMainWindow):
     
     def __init__(self, source_lang: str = "ja", target_lang: str = "en", show_romaji: bool = False, show_hiragana: bool = False):
         super().__init__()
+        self.config = Config()
         self.source_lang = source_lang
         self.target_lang = target_lang
         self.show_romaji = show_romaji
         self.show_hiragana = show_hiragana
-        self.translation_worker = TranslationWorker()
+        self.translation_worker = TranslationWorker(self.config)
         self.clipboard_timer = QTimer()
         self.last_clipboard_text = ""
         self.is_monitoring = False
@@ -117,6 +121,11 @@ class FloatingTranslator(QMainWindow):
         # Setup Japanese converter if needed
         if self.source_lang == "ja" and (self.show_romaji or self.show_hiragana):
             self.translation_worker.engine.setup_japanese_converter()
+        
+        # Show current engine in status
+        current_engine = self.config.get_engine()
+        self.status_label.setText(f"Ready - Engine: {current_engine}")
+        self.status_label.setStyleSheet("color: #90EE90;")
         
     def init_ui(self):
         """Initialize the user interface."""
@@ -302,10 +311,7 @@ class FloatingTranslator(QMainWindow):
                 font-size: 14px;
             }
             
-            /* Show that text is not selectable */
-            QTextEdit:hover {
-                cursor: default;
-            }
+            /* Text areas are non-selectable */
             
             QComboBox {
                 background-color: rgba(50, 50, 50, 200);
@@ -419,6 +425,11 @@ class FloatingTranslator(QMainWindow):
         title = QLabel("Clip Translate")
         title.setStyleSheet("color: #ffffff; font-weight: bold;")
         
+        settings_btn = QPushButton("⚙")
+        settings_btn.setMaximumSize(20, 20)
+        settings_btn.setToolTip("Settings")
+        settings_btn.clicked.connect(self.open_settings)
+        
         minimize_btn = QPushButton("−")
         minimize_btn.setMaximumSize(20, 20)
         minimize_btn.clicked.connect(self.showMinimized)
@@ -437,6 +448,7 @@ class FloatingTranslator(QMainWindow):
         
         layout.addWidget(title)
         layout.addStretch()
+        layout.addWidget(settings_btn)
         layout.addWidget(minimize_btn)
         layout.addWidget(close_btn)
         
@@ -489,11 +501,12 @@ class FloatingTranslator(QMainWindow):
     def toggle_monitoring(self, state):
         """Toggle clipboard monitoring."""
         self.is_monitoring = state == Qt.CheckState.Checked.value
+        current_engine = self.config.get_engine()
         if self.is_monitoring:
-            self.status_label.setText("Monitoring...")
+            self.status_label.setText(f"Monitoring... - Engine: {current_engine}")
             self.status_label.setStyleSheet("color: #90EE90;")
         else:
-            self.status_label.setText("Paused")
+            self.status_label.setText(f"Paused - Engine: {current_engine}")
             self.status_label.setStyleSheet("color: #FFD700;")
     
     @pyqtSlot(int)
@@ -567,7 +580,8 @@ class FloatingTranslator(QMainWindow):
             if self.reading_text:
                 self.reading_text.clear()
             
-            self.status_label.setText("Manual Input Mode")
+            current_engine = self.config.get_engine()
+            self.status_label.setText(f"Manual Input Mode - Engine: {current_engine}")
             self.status_label.setStyleSheet("color: #87CEEB;")
             logger.info("\n🔄 MODE: Switched to MANUAL INPUT mode")
         else:
@@ -590,7 +604,8 @@ class FloatingTranslator(QMainWindow):
             if self.reading_text:
                 self.reading_text.clear()
             
-            self.status_label.setText("Monitoring...")
+            current_engine = self.config.get_engine()
+            self.status_label.setText(f"Monitoring... - Engine: {current_engine}")
             self.status_label.setStyleSheet("color: #90EE90;")
             logger.info("\n🔄 MODE: Switched to CLIPBOARD MONITORING mode")
     
@@ -695,6 +710,42 @@ class FloatingTranslator(QMainWindow):
     def on_language_detected(self, language):
         """Handle language detection result."""
         # Language already logged in worker
+    
+    @pyqtSlot()
+    def open_settings(self):
+        """Open the settings dialog."""
+        settings_dialog = SettingsDialog(self.config, self)
+        settings_dialog.engine_changed.connect(self.on_engine_changed)
+        settings_dialog.exec()
+    
+    @pyqtSlot(str)
+    def on_engine_changed(self, new_engine):
+        """Handle engine change from settings dialog."""
+        logger.info(f"Engine changed to: {new_engine}")
+        
+        # Update the translation worker's engine
+        self.translation_worker.engine = TranslationEngine(self.config)
+        
+        # Setup Japanese converter if needed
+        if self.source_lang == "ja" and (self.show_romaji or self.show_hiragana):
+            self.translation_worker.engine.setup_japanese_converter()
+        
+        # Clear existing translations to force re-translation with new engine
+        self.original_text.clear()
+        self.translation_text.clear()
+        if self.reading_text:
+            self.reading_text.clear()
+        
+        # Update status to show new engine
+        if self.is_monitoring:
+            self.status_label.setText(f"Monitoring... - Engine: {new_engine}")
+            self.status_label.setStyleSheet("color: #90EE90;")
+        elif self.is_manual_mode:
+            self.status_label.setText(f"Manual Input Mode - Engine: {new_engine}")
+            self.status_label.setStyleSheet("color: #87CEEB;")
+        else:
+            self.status_label.setText(f"Ready - Engine: {new_engine}")
+            self.status_label.setStyleSheet("color: #90EE90;")
     
     # Window dragging
     def mousePressEvent(self, event):
