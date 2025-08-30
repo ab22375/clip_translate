@@ -61,7 +61,7 @@ class TranslationWorker(QThread):
             
             if detected:
                 self.language_detected.emit(detected)
-                logger.info(f"Detected language: {detected}, expected: {self.source_lang}")
+                logger.info(f"Language detected: {detected} (expected: {self.source_lang})")
                 
                 # Only translate if language matches OR if source is 'auto'
                 if detected == self.source_lang or self.source_lang == 'auto':
@@ -73,7 +73,7 @@ class TranslationWorker(QThread):
                                 self.target_lang
                             )
                         )
-                        logger.info(f"Translation completed: {translated[:50]}...")
+                        # Translation logging moved to on_translation_ready for better formatting
                         self.translation_ready.emit(translated, original, cached)
                     except Exception as trans_error:
                         logger.error(f"Translation error: {trans_error}")
@@ -107,6 +107,7 @@ class FloatingTranslator(QMainWindow):
         self.last_clipboard_text = ""
         self.is_monitoring = False
         self.is_closing = False  # Flag to prevent operations during shutdown
+        self.is_manual_mode = False  # Flag for manual input mode
         self.init_ui()
         self.setup_connections()
         
@@ -176,6 +177,18 @@ class FloatingTranslator(QMainWindow):
         # Original text
         original_group = QGroupBox("Original")
         original_layout = QVBoxLayout()
+        
+        # Add input mode controls
+        input_controls_layout = QHBoxLayout()
+        self.input_mode_btn = QPushButton("Switch to Manual Input")
+        self.input_mode_btn.setCheckable(True)
+        self.translate_btn = QPushButton("Translate")
+        self.translate_btn.setVisible(False)  # Hidden by default
+        input_controls_layout.addWidget(self.input_mode_btn)
+        input_controls_layout.addWidget(self.translate_btn)
+        input_controls_layout.addStretch()
+        original_layout.addLayout(input_controls_layout)
+        
         self.original_text = QTextEdit()
         self.original_text.setReadOnly(True)
         self.original_text.setMinimumHeight(150)
@@ -316,13 +329,24 @@ class FloatingTranslator(QMainWindow):
             }
             
             QComboBox QAbstractItemView {
-                background-color: rgba(240, 240, 240, 250);
-                color: #000000;
+                background-color: rgba(100, 100, 100, 250); # background color of list items
+                color: #333333;
                 selection-background-color: rgba(70, 130, 180, 200);
                 selection-color: #ffffff;
                 border: 1px solid rgba(70, 70, 70, 150);
                 border-radius: 4px;
                 padding: 2px;
+            }
+            
+            QComboBox QAbstractItemView::item {
+                color: #333333;
+                background-color: transparent;
+                padding: 4px;
+            }
+            
+            QComboBox QAbstractItemView::item:selected {
+                background-color: rgba(70, 130, 180, 200);
+                color: #ffffff;
             }
             
             QPushButton {
@@ -451,6 +475,8 @@ class FloatingTranslator(QMainWindow):
         self.swap_btn.clicked.connect(self.swap_languages)
         self.source_combo.currentIndexChanged.connect(self.update_languages)
         self.target_combo.currentIndexChanged.connect(self.update_languages)
+        self.input_mode_btn.clicked.connect(self.toggle_input_mode)
+        self.translate_btn.clicked.connect(self.translate_manual_input)
         
         # Clipboard timer
         self.clipboard_timer.timeout.connect(self.check_clipboard)
@@ -498,7 +524,7 @@ class FloatingTranslator(QMainWindow):
             QTimer.singleShot(1000, lambda: self.copy_translation_btn.setText("Copy Translation"))
             
             # Keep the text visible - don't clear anything
-            logger.info(f"Copied translation to clipboard: {text[:50]}...")
+            logger.info(f"\n📋 Copied translation to clipboard")
     
     @pyqtSlot()
     def swap_languages(self):
@@ -516,15 +542,90 @@ class FloatingTranslator(QMainWindow):
         if source and target:
             self.translation_worker.set_languages(source, target)
     
+    @pyqtSlot()
+    def toggle_input_mode(self):
+        """Toggle between clipboard monitoring and manual input mode."""
+        self.is_manual_mode = self.input_mode_btn.isChecked()
+        
+        if self.is_manual_mode:
+            # Switch to manual input mode
+            self.input_mode_btn.setText("Switch to Clipboard Mode")
+            self.translate_btn.setVisible(True)
+            self.monitor_checkbox.setChecked(False)
+            self.monitor_checkbox.setEnabled(False)
+            
+            # Make original text area editable
+            self.original_text.setReadOnly(False)
+            self.original_text.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextEditorInteraction
+            )
+            self.original_text.setPlaceholderText("Type or paste text here to translate...")
+            
+            # Clear any existing text
+            self.original_text.clear()
+            self.translation_text.clear()
+            if self.reading_text:
+                self.reading_text.clear()
+            
+            self.status_label.setText("Manual Input Mode")
+            self.status_label.setStyleSheet("color: #87CEEB;")
+            logger.info("\n🔄 MODE: Switched to MANUAL INPUT mode")
+        else:
+            # Switch back to clipboard mode
+            self.input_mode_btn.setText("Switch to Manual Input")
+            self.translate_btn.setVisible(False)
+            self.monitor_checkbox.setEnabled(True)
+            self.monitor_checkbox.setChecked(True)
+            
+            # Make original text area read-only again
+            self.original_text.setReadOnly(True)
+            self.original_text.setTextInteractionFlags(
+                Qt.TextInteractionFlag.NoTextInteraction
+            )
+            self.original_text.setPlaceholderText("")
+            
+            # Clear text areas
+            self.original_text.clear()
+            self.translation_text.clear()
+            if self.reading_text:
+                self.reading_text.clear()
+            
+            self.status_label.setText("Monitoring...")
+            self.status_label.setStyleSheet("color: #90EE90;")
+            logger.info("\n🔄 MODE: Switched to CLIPBOARD MONITORING mode")
+    
+    @pyqtSlot()
+    def translate_manual_input(self):
+        """Translate manually entered text."""
+        text = self.original_text.toPlainText()
+        if not text or not text.strip():
+            self.status_label.setText("No text to translate")
+            self.status_label.setStyleSheet("color: #FFD700;")
+            return
+        
+        # Clear translation area and show status
+        self.translation_text.clear()
+        if self.reading_text:
+            self.reading_text.clear()
+        self.status_label.setText("Translating...")
+        self.status_label.setStyleSheet("color: #87CEEB;")
+        
+        # Update languages before translating
+        self.update_languages()
+        
+        # Trigger translation
+        logger.info("\n" + "="*60 + "\n" + f"✏️  MANUAL INPUT:\n{text}\n" + "-"*60)
+        self.translation_worker.translate(text)
+    
     def check_clipboard(self):
         """Check clipboard for new content."""
-        if not self.is_monitoring or self.is_closing:
+        if not self.is_monitoring or self.is_closing or self.is_manual_mode:
             return
             
         try:
             current_text = pyperclip.paste()
             if current_text and current_text != self.last_clipboard_text:
-                logger.info(f"New clipboard content detected: {current_text[:50]}...")
+                logger.info("\n" + "="*60 + "\n" + f"📋 NEW CLIPBOARD CONTENT:\n{current_text}\n" + "-"*60)
                 self.last_clipboard_text = current_text
                 
                 # Don't show text in original area yet - wait for language detection
@@ -539,7 +640,7 @@ class FloatingTranslator(QMainWindow):
                 self.update_languages()
                 
                 # Trigger translation (which includes language detection)
-                logger.info(f"Starting translation with source={self.translation_worker.source_lang}, target={self.translation_worker.target_lang}")
+                # Language info logged in translation worker
                 self.translation_worker.translate(current_text)
         except Exception as e:
             if not self.is_closing:
@@ -550,8 +651,11 @@ class FloatingTranslator(QMainWindow):
     @pyqtSlot(str, str, bool)
     def on_translation_ready(self, translated, original, cached):
         """Handle translation result."""
-        # Now show both original and translated text
-        self.original_text.setPlainText(original)
+        # In manual mode, preserve the user's input text instead of replacing it
+        if not self.is_manual_mode:
+            # Now show both original and translated text
+            self.original_text.setPlainText(original)
+        # Always update the translation
         self.translation_text.setPlainText(translated)
         
         # Show Japanese reading if enabled and available
@@ -577,7 +681,8 @@ class FloatingTranslator(QMainWindow):
         
         # Don't automatically update clipboard to avoid loops
         # User can manually copy using the Copy button
-        logger.info(f"Translation ready: {translated[:100]}...")
+        cache_status = "[CACHED]" if cached else "[NEW]"
+        logger.info(f"\n🔄 TRANSLATION {cache_status}:\n{translated}\n" + "="*60)
     
     @pyqtSlot(str)
     def on_translation_error(self, error):
@@ -589,7 +694,7 @@ class FloatingTranslator(QMainWindow):
     @pyqtSlot(str)
     def on_language_detected(self, language):
         """Handle language detection result."""
-        logger.info(f"Detected language: {language}")
+        # Language already logged in worker
     
     # Window dragging
     def mousePressEvent(self, event):
