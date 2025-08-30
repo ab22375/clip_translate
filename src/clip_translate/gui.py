@@ -169,12 +169,42 @@ class FloatingTranslator(QMainWindow):
             self.source_combo.addItem(display, code)
             self.target_combo.addItem(display, code)
         
+        # Force the dropdown styling on ComboBoxes
+        combo_dropdown_style = """
+            QComboBox QAbstractItemView {
+                background-color: rgba(10, 14, 6, 0.47);
+                color: #803232;
+                selection-background-color: rgba(70, 130, 180, 200);
+                selection-color: #ffffff;
+            }
+            QComboBox QAbstractItemView::item {
+                color: #803232;
+                background-color: rgba(10, 14, 6, 0.47);
+                padding: 4px;
+            }
+            QComboBox QAbstractItemView::item:hover {
+                color: #803232;
+                background-color: rgba(255, 169, 70, 0.99);
+            }
+            QComboBox QAbstractItemView::item:selected {
+                background-color: rgba(70, 130, 180, 200);
+                color: #ffffff;
+            }
+        """
+        self.source_combo.setStyleSheet(combo_dropdown_style)
+        self.target_combo.setStyleSheet(combo_dropdown_style)
+        
         # Defaults will be set in set_language_selection()
         
-        lang_layout.addWidget(QLabel("From:"))
+        from_label = QLabel("From:")
+        from_label.setStyleSheet("color: #ffffff;")
+        to_label = QLabel("To:")
+        to_label.setStyleSheet("color: #ffffff;")
+        
+        lang_layout.addWidget(from_label)
         lang_layout.addWidget(self.source_combo)
         lang_layout.addWidget(self.swap_btn)
-        lang_layout.addWidget(QLabel("To:"))
+        lang_layout.addWidget(to_label)
         lang_layout.addWidget(self.target_combo)
         
         lang_group.setLayout(lang_layout)
@@ -254,6 +284,7 @@ class FloatingTranslator(QMainWindow):
         
         self.monitor_checkbox = QCheckBox("Monitor Clipboard")
         self.monitor_checkbox.setChecked(True)
+        self.monitor_checkbox.setStyleSheet("color: #ffffff;")
         
         self.status_label = QLabel("Ready")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignRight)
@@ -266,13 +297,16 @@ class FloatingTranslator(QMainWindow):
         
         # Opacity slider
         opacity_layout = QHBoxLayout()
-        opacity_layout.addWidget(QLabel("Opacity:"))
+        opacity_label_text = QLabel("Opacity:")
+        opacity_label_text.setStyleSheet("color: #ffffff;")
+        opacity_layout.addWidget(opacity_label_text)
         self.opacity_slider = QSlider(Qt.Orientation.Horizontal)
         self.opacity_slider.setRange(30, 100)
         self.opacity_slider.setValue(95)
         self.opacity_slider.setMaximumWidth(100)
         opacity_layout.addWidget(self.opacity_slider)
         self.opacity_label = QLabel("95%")
+        self.opacity_label.setStyleSheet("color: #ffffff;")
         opacity_layout.addWidget(self.opacity_label)
         opacity_layout.addStretch()
         
@@ -281,7 +315,7 @@ class FloatingTranslator(QMainWindow):
         # Apply styles
         self.setStyleSheet("""
             #centralWidget {
-                background-color: rgba(30, 30, 30, 240);
+                background-color: rgba(64, 64, 64, 240);
                 border-radius: 12px;
                 border: 1px solid rgba(60, 60, 60, 200);
             }
@@ -314,7 +348,7 @@ class FloatingTranslator(QMainWindow):
             /* Text areas are non-selectable */
             
             QComboBox {
-                background-color: rgba(50, 50, 50, 200);
+                background-color: rgba(150, 150, 150, 200);
                 color: #ffffff;
                 border: 1px solid rgba(70, 70, 70, 150);
                 border-radius: 4px;
@@ -335,19 +369,24 @@ class FloatingTranslator(QMainWindow):
             }
             
             QComboBox QAbstractItemView {
-                background-color: rgba(100, 100, 100, 250); # background color of list items
-                color: #333333;
-                selection-background-color: rgba(70, 130, 180, 200);
-                selection-color: #ffffff;
+                background-color: rgba(255, 169, 70, 0.99); # background color of list items
+                color: #803232;
+                selection-background-color: rgba(255, 169, 70, 0.99); # rgba(70, 130, 180, 200);
+                selection-color: #803232;
                 border: 1px solid rgba(70, 70, 70, 150);
                 border-radius: 4px;
                 padding: 2px;
             }
             
             QComboBox QAbstractItemView::item {
-                color: #333333;
-                background-color: transparent;
+                color: #803232;
+                background-color: rgba(255, 169, 70, 0.99);
                 padding: 4px;
+            }
+            
+            QComboBox QAbstractItemView::item:hover {
+                color: #803232;
+                background-color: rgba(255, 169, 70, 0.99);
             }
             
             QComboBox QAbstractItemView::item:selected {

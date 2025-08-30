@@ -387,7 +387,7 @@ class SettingsDialog(QDialog):
             
             QComboBox QAbstractItemView {
                 background-color: rgba(255, 248, 220, 250);
-                color: #333333;
+                color: #000000;
                 selection-background-color: rgba(70, 130, 180, 200);
                 selection-color: #ffffff;
                 border: 1px solid rgba(70, 70, 70, 150);
@@ -396,7 +396,7 @@ class SettingsDialog(QDialog):
             }
             
             QComboBox QAbstractItemView::item {
-                color: #333333;
+                color: #000000;
                 background-color: transparent;
                 padding: 4px;
             }

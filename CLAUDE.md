@@ -1,9 +1,11 @@
 # Project Instructions for Claude
 
 ## Project Overview
+
 `clip_translate` is a Python application that monitors clipboard content and automatically translates text between languages using multiple translation engines (Google Translate, OpenAI, DeepL, Claude). It comes in two forms: a CLI tool and a modern GUI application. The application is particularly optimized for Japanese translations with support for romaji and hiragana readings.
 
 ## Key Features
+
 - **Dual Interface**: Both CLI and floating window GUI options
 - **Multiple Translation Engines**: Google Translate, OpenAI, DeepL, Claude
 - **Configuration Management**: Persistent settings with config file and environment variables
@@ -18,6 +20,7 @@
 - Draggable, resizable interface optimized for macOS (GUI)
 
 ## Development Setup
+
 ```bash
 # Install in development mode
 uv pip install -e .
@@ -35,15 +38,18 @@ clip_translate_gui --help
 ```
 
 ## Configuration
+
 The application uses a configuration file at `~/.clip_translate/config.json` and supports environment variables:
 
-### Engines Available:
+### Engines Available
+
 - **google**: Free, no API key required (default)
 - **openai**: Requires OPENAI_API_KEY
 - **deepl**: Requires DEEPL_API_KEY  
 - **claude**: Requires ANTHROPIC_API_KEY
 
-### CLI Configuration:
+### CLI Configuration
+
 ```bash
 # Configure via CLI
 clip_translate configure
@@ -52,10 +58,12 @@ clip_translate configure
 clip_translate translate --engine openai -s ja -t en
 ```
 
-### GUI Configuration:
+### GUI Configuration
+
 Use the settings dialog in the GUI to configure engines and API keys.
 
 ## Code Style & Conventions
+
 - **CLI**: Use `typer` for CLI commands, `rich.console` for terminal output
 - **GUI**: Use `PyQt6` for GUI components, async workers for non-blocking translations
 - Use `loguru` for logging across both CLI and GUI (not Python's logging module)
@@ -66,6 +74,7 @@ Use the settings dialog in the GUI to configure engines and API keys.
 ## Testing Commands
 
 ### CLI Commands
+
 ```bash
 # Basic translation
 clip_translate translate -s es -t en
@@ -92,11 +101,13 @@ clip_translate_gui -s ja -t en --hiragana
 ## Important Implementation Notes
 
 ### Language Detection
+
 - Both CLI and GUI use Google Translate's detection API to verify clipboard content matches the source language
 - Non-matching languages are skipped with a warning message
 - GUI shows "Skipped" status for non-matching languages
 
 ### Japanese Text Processing
+
 - Uses `pykakasi` library for Japanese text conversion
 - Romaji uses Hepburn romanization system
 - Hiragana conversion converts kanji to hiragana
@@ -104,6 +115,7 @@ clip_translate_gui -s ja -t en --hiragana
 - GUI displays readings in a dedicated purple-tinted text area
 
 ### Translation Architecture
+
 - **Core Engine**: `TranslationEngine` class in `core.py` handles all translation logic
 - **Multiple Backends**: Pluggable backend system supporting Google, OpenAI, DeepL, Claude
 - **Configuration**: `Config` class manages settings, API keys, and engine selection
@@ -112,11 +124,13 @@ clip_translate_gui -s ja -t en --hiragana
 - **Event Loop Management**: GUI carefully manages asyncio loops to prevent "loop closed" errors
 
 ### Caching
+
 - Translations are cached in memory during runtime
 - Cache stores both translated and original text
 - Cache status is shown in CLI output ([cached] vs [new]) and GUI status label
 
 ### GUI-Specific Implementation
+
 - **Window Management**: Always-on-top, frameless window with custom title bar
 - **Threading**: `TranslationWorker` runs in background thread using `QThread`
 - **UI Updates**: All translation results update UI via Qt signals/slots
@@ -164,6 +178,7 @@ clip_translate_gui -s ja -t en --hiragana
    - Both CLI and GUI automatically remove empty lines from translations
 
 ## Project Structure
+
 ```
 src/clip_translate/
 ├── __init__.py          # Package initialization
@@ -176,6 +191,7 @@ src/clip_translate/
 ```
 
 ## Dependencies
+
 - `googletrans` - Google Translate API (async)
 - `openai` - OpenAI API for GPT translations
 - `deepl` - DeepL API for high-quality translations  
@@ -190,6 +206,7 @@ src/clip_translate/
 - `python-dotenv` - Environment variable loading
 
 ## Future Improvements to Consider
+
 - Add file input/output support for both CLI and GUI
 - Add translation history saving and browsing
 - Add system tray integration for GUI
