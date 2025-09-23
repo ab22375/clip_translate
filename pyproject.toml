@@ -69,7 +69,7 @@ clip_translate_gui = "clip_translate.gui:main"
 [tool.ruff]
 line-length = 88
 target-version = "py312"
-select = [
+lint.select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
     "F",  # pyflakes
@@ -78,9 +78,9 @@ select = [
     "C4", # flake8-comprehensions
     "UP", # pyupgrade
 ]
-ignore = []
-fixable = ["ALL"]
-unfixable = []
+lint.ignore = []
+lint.fixable = ["ALL"]
+lint.unfixable = []
 
 [tool.ruff.format]
 quote-style = "double"
